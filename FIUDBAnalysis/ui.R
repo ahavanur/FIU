@@ -1,33 +1,35 @@
-#
-# This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-# 
-#    http://shiny.rstudio.com/
-#
-
-library(shiny)
-
-# Define UI for application that draws a histogram
-shinyUI(fluidPage(
-  
-  # Application title
-  titlePanel("Old Faithful Geyser Data"),
-  
-  # Sidebar with a slider input for number of bins 
-  sidebarLayout(
-    sidebarPanel(
-       sliderInput("bins",
-                   "Number of bins:",
-                   min = 1,
-                   max = 50,
-                   value = 30)
-    ),
-    
-    # Show a plot of the generated distribution
-    mainPanel(
-       plotOutput("distPlot")
-    )
-  )
-))
+library(markdown)
+navbarPage("Navigation",
+           tabPanel("Home", verbatimTextOutput("home screen")),
+           tabPanel("CTR Summary",
+                    sidebarLayout(
+                      sidebarPanel(
+                        checkboxGroupInput("ctr_banks", "Banks", choices = 
+                                             list("Bank of Hawaii" = "BANK OF HAWAII",
+                                                  "Bank of Guam" = "BANK OF GUAM",
+                                                  "BankPacific" = "BANKPACIFIC, LTD."),
+                                           selected = 0),
+                        checkboxGroupInput("ctr_flow", "Direction of Cash", choices = 
+                                             list("Withdrawals" = "WITHDRAWAL",
+                                                  "Deposits" = "DEPOSIT")),
+                        checkboxInput("ctr_net", "Show Net Cash Direction", value = FALSE),
+                        dateRangeInput("ctr_dates", "Date Range"),
+                        numericInput("ctr_min_cash", 
+                                     "Min. Cash Amount", 
+                                     value = 0),
+                        numericInput("ctr_max_cash", 
+                                   "Max. Cash Amount", 
+                                   value = 100),
+                        numericInput("ctr_min_ppl", 
+                                     "Min. People Involved", 
+                                     value = 0),
+                        numericInput("ctr_max_cash", 
+                                     "Max. People Involved", 
+                                     value = 100)),
+                      mainPanel(
+                        plotOutput("plot")
+                      ))),
+           tabPanel("Summary",
+                    verbatimTextOutput("summary")
+           )
+           )
