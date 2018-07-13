@@ -2,9 +2,7 @@ library(markdown)
 
 navbarPage("Navigation",
            tabPanel("Home", verbatimTextOutput("home screen")),
-           tabPanel("CTR Summary",
-                    fluidPage(
-                      sidebarLayout(
+           tabPanel("CTR Summary", fluidPage(sidebarLayout(
                       sidebarPanel(
                         checkboxGroupInput("ctr_banks", "Banks", choices = 
                                              list("Bank of Hawaii" = "BANK OF HAWAII",
@@ -32,7 +30,10 @@ navbarPage("Navigation",
                       mainPanel(
                         uiOutput("ctr_ui"),width = 10
                       )))),
-           tabPanel("Summary",
-                    verbatimTextOutput("summary")
-           )
+           tabPanel("Immigration & Customs Summary", fluidPage(sidebarLayout(
+                      sidebarPanel(
+                        dateRangeInput("imm_dates", "Date Range", start = '2015-01-01', end = today(), format = 'mm-dd-yyyy', separator = "-"),
+                        checkboxInput("imm_permit", "Holds Permit", value = FALSE), width = 2)
+                      ,
+                      mainPanel(uiOutput('imm_ui'), width = 10))))
            )
