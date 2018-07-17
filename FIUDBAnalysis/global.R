@@ -25,6 +25,7 @@ pit_df_acct = separate_rows(pit_df,accountNumbers,sep="/")
 pit_df_acct = separate_rows(pit_df_acct,accountNumbers,sep=",")
 pit_acct_count = pit_df_acct %>% group_by(CTRID) %>% summarize(count = n())
 
+str_df$fullNameOfFinancialInstitution = as.character(toupper(str_df$fullNameOfFinancialInstitution))
 str_df$startDateOfSuspiciousActivity = as.Date(strptime(str_df$startDateOfSuspiciousActivity, "%m/%d/%Y %H:%M:%S"))
 str_df$endDateOfSuspiciousActivity = as.Date(strptime(str_df$endDateOfSuspiciousActivity, "%m/%d/%Y %H:%M:%S"))
 str_df$amountOfCash =  as.numeric(gsub("[\\$,]", "", as.character(str_df$amountOfCash)))
@@ -33,8 +34,26 @@ str_df$duration = str_df$endDateOfSuspiciousActivity - str_df$startDateOfSuspici
 str_df$narrative = as.character(str_df$narrative)
 str_df$duration[which(is.na(str_df$duration))] = 0
 str_df$duration[which(str_df$duration < 0)] = 0
-
+str_df[which.max(str_df$strDateGenerate),'strDateGenerate'] <- "2017-01-27"
 
 stracct_df = separate_rows(str_df,accountNumbers,sep="/")
 stracct_df = separate_rows(stracct_df,accountNumbers,sep=",")
 stracct_agg = stracct_df %>% group_by(STRID) %>% summarise(count = n()) 
+
+restrict_banks = function(df, input_banks) {
+  #choosing banks
+  if (length(input_banks) == 0) {
+    banks = unique(toupper(df$fullNameOfFinancialInstitution))
+  }
+  else {
+    banks = input_banks
+  }
+  rows = which(toupper(df$fullNameOfFinancialInstitution) %in% banks)
+  return(rows)
+}
+
+restrict_range = function(df, field1, field2, ranges) {
+  rows_field1 <- which(df[,field1] >= ranges[1])
+  rows_field2 <- which(df[,field2] <= ranges[2])
+  return(intersect(rows_field1, rows_field2))
+}

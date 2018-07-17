@@ -40,10 +40,10 @@ navbarPage("Navigation",
                       sidebarPanel(
                         checkboxGroupInput("str_banks", "Banks", choices = 
                                              list("Bank of Hawaii" = "BANK OF HAWAII",
-                                                  "Bank of Guam" = "BANK OF GUAM",
-                                                  "BankPacific" = "BANKPACIFIC, LTD."),
+                                                  "Bank of Guam" = "BANK OF GUAM"),
                                            selected = 0),
-                        dateRangeInput("str_dates", "Date Range", start = '2015-01-01', end = max(str_df$strDateGenerate, na.rm = TRUE), format = 'mm-dd-yyyy', separator = "-"),
+                        dateRangeInput("str_generate_dates", "STR Generation Date Range", start = '2015-01-01', end = today(), format = 'mm-dd-yyyy', separator = "-"),
+                        dateRangeInput("str_sus_dates", "STR Suspicion Date Range", start = '2015-01-01', end = today(), format = 'mm-dd-yyyy', separator = "-"),
                         numericInput("str_min_cash", 
                                      "Min. Cash Amount", 
                                      value = min(str_df$amountOfCash,na.rm=TRUE)),
@@ -56,8 +56,9 @@ navbarPage("Navigation",
                         numericInput("str_max_accts", 
                                      "Max. Accounts Involved", 
                                      value = 10^ceiling(log10(max(stracct_agg$count)))),
-                        selectInput("str_summary_type", "Summary Characterization", choices = )
-                        checkboxInput("str_admission", "Admission of Guilt", value=FALSE)
+                        checkboxInput("str_admission", "Admission of Guilt", value=FALSE),
+                        checkboxInput("str_bank_iso", "Show Banks Individually", value = FALSE),
+                        width = 2
                       ),
                       mainPanel(uiOutput("str_ui"), width = 10)
            )))
