@@ -35,48 +35,59 @@ shinyServer(function(input, output) {
     else {
       directions = input$ctr_flow
     }
-    return(which(toupper(ctr_display$cashDirection) %in% directions))
+    return(which(toupper(ctr_df$cashDirection) %in% directions))
   })
+  
+  restrictCTRDatesGenerate <- reactive({
+    dates <- input$ctr_dates
+    field1 <- 'dateOfTransaction'
+    field2 <- 'dateOfTransaction'
+    return(restrict_range(ctr_df, field1, field2, dates))
+  })
+  
+  restrictCTRcashAmount <- reactive ({
+    cash_range <- c(input$ctr_min_cash, input$ctr_max_cash)
+    field1 <- 'cashAmount'
+    field2 <- 'cashAmount'
+    return(restrict_range(ctr_df, field1, field2, cash_range))
+  })
+  
+  restrictCTRaccts <- reactive ({
+    range_account_ctrs = pit_acct_count$CTRID[which(pit_acct_count$count %in% seq(input$ctr_min_accts, input$ctr_max_accts))]
+    return(which(ctr_df$CTRID %in% range_account_ctrs))
+  })
+  
+  restrictCTR <- reactive ({
+    ctr_rows_banks <- restrictCTRBanks()
+    ctr_rows_direction <- restrictCTRDirection()
+    ctr_rows_dates <- restrictCTRDatesGenerate()
+    ctr_rows_cash <- restrictCTRcashAmount()
+    ctr_rows_accts <- restrictCTRaccts()
+    vals <- list(ctr_rows_banks,ctr_rows_direction,ctr_rows_dates,ctr_rows_cash,ctr_rows_accts)
+    ctr_reduced = ctr_df[Reduce(intersect,vals),] %>% mutate(month = format(dateOfTransaction, "%m"), year = format(dateOfTransaction, "%Y"))
+    ctr_reduced$date = as.Date(paste(ctr_reduced$year, ctr_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
+    return(ctr_reduced)
+  })
+  
   output$ctr_plot <- 
     renderPlot({
-        ctr_display = ctr_df
-        #selecting banks
-        # if (length(input$ctr_banks) == 0) {
-        #   banks = unique(toupper(ctr_display$fullNameOfFinancialInstitution))
-        # }
-        # else {
-        #   banks = input$ctr_banks
-        # }
-        ctr_display = ctr_display[which(toupper(ctr_display$fullNameOfFinancialInstitution) %in% c(banks, "")),]
-        #selecting direction
+        ctr_display <- restrictCTR()
+        
         if (length(input$ctr_flow) == 0) {
           directions = c("DEPOSIT", "WITHDRAWAL")
         }
         else {
           directions = input$ctr_flow
         }
-        ctr_display = ctr_display[which(toupper(ctr_display$cashDirection) %in% directions),]
-        #restricting date range
-        ctr_display = ctr_display[which(ctr_display$dateOfTransaction >= input$ctr_dates[1]),]
-        ctr_display = ctr_display[which(ctr_display$dateOfTransaction <= input$ctr_dates[2]),]
-        #restricting ctr amounts 
-        ctr_display = ctr_display[which(ctr_display$cashAmount >= input$ctr_min_cash),]
-        ctr_display = ctr_display[which(ctr_display$cashAmount <= input$ctr_max_cash),]
-        #restricting accounts range
-        range_account_ctrs = pit_acct_count$CTRID[which(pit_acct_count$count %in% seq(input$ctr_min_accts, input$ctr_max_accts))]
-        ctr_display = ctr_display[which(ctr_display$CTRID %in% range_account_ctrs),]
-        ctr_display$cashDirection = toupper(ctr_display$cashDirection)
-        #putting it all together
+        
         if (nrow(ctr_display) == 0) {
           h3("No Data Matched Search Criteria!")
         }
         else {
           #aggregating by month
           ctr_by_month = ctr_display %>%
-            mutate(month = format(dateOfTransaction, "%m"), year = format(dateOfTransaction, "%Y")) %>%
-            group_by(month, year, fullNameOfFinancialInstitution, cashDirection) %>%
+            group_by(date, fullNameOfFinancialInstitution, cashDirection) %>%
             summarise(total = sum(cashAmount), count = n())
-          ctr_by_month$date = as.Date(paste(ctr_by_month$year, ctr_by_month$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
           #seperating deposits for withdrawals
           deposits = ctr_by_month[which(toupper(ctr_by_month$cashDirection) == 'DEPOSIT'),]
           withdrawals = ctr_by_month[which(toupper(ctr_by_month$cashDirection) == 'WITHDRAWAL'),]
@@ -104,7 +115,7 @@ shinyServer(function(input, output) {
           min_rnge = -1*(abs(min(rnge)) - floor(abs(min(rnge))%%(10^floor(log10(abs(min(rnge)))))))
           rnge = round(rnge[(round(rnge%%10^(floor(log10(max(rnge)))))%%(10^(floor(log10(max(rnge))))))==0])
           rnge = c(min_rnge, rnge, max_rnge)
-          
+          #monstrosity over
           
           w_d_total <- ggplot(NULL, aes(date, total)) + 
             geom_bar(stat = "identity", aes(fill = fullNameOfFinancialInstitution), data = deposits, fill = "forest green") +
@@ -171,19 +182,19 @@ shinyServer(function(input, output) {
   )
   
   
-  restrictSTRBanks <- reactive({
+  restrictSTRbanks <- reactive({
     input_banks = input$str_banks
     return(restrict_banks(str_df, input_banks))
   })
   
-  restrictSTRDatesGenerate <- reactive({
+  restrictSTRDdatesGenerate <- reactive({
     dates <- input$str_generate_dates
     field1 <- 'strDateGenerate'
     field2 <- 'strDateGenerate'
     return(restrict_range(str_df, field1, field2, dates))
   })
   
-  restrictSTRDatesActivity <- reactive({
+  restrictSTRdatesActivity <- reactive({
     dates <- input$str_sus_dates
     field1 <- 'startDateOfSuspiciousActivity'
     field2 <- 'endDateOfSuspiciousActivity'
@@ -202,7 +213,7 @@ shinyServer(function(input, output) {
     return(which(str_df$STRID %in% strs_in_range))
   })
   
-  restrictSTRAdmissions <- reactive ({
+  restrictSTRadmissions <- reactive ({
     if (input$str_admission) {
      return(which(str_df$admissionOrConfession == 'Yes'))
     }
@@ -210,12 +221,12 @@ shinyServer(function(input, output) {
   })
   
   restrictSTR <- reactive ({
-    str_rows_banks <- restrictSTRBanks()
-    str_rows_gen_dates <- restrictSTRDatesGenerate()
-    str_rows_sus_dates <- restrictSTRDatesActivity()
+    str_rows_banks <- restrictSTRbanks()
+    str_rows_gen_dates <- restrictSTRdatesGenerate()
+    str_rows_sus_dates <- restrictSTRdatesActivity()
     str_rows_cash <- restrictSTRcashAmount()
     str_rows_accts <- restrictSTRaccts()
-    str_rows_admin <- restrictSTRAdmissions()
+    str_rows_admin <- restrictSTRadmissions()
     vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin)
     return(str_df[Reduce(intersect, vals),])
   })
