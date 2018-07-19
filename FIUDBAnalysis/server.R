@@ -187,7 +187,7 @@ shinyServer(function(input, output) {
     return(restrict_banks(str_df, input_banks))
   })
   
-  restrictSTRDdatesGenerate <- reactive({
+  restrictSTRdatesGenerate <- reactive({
     dates <- input$str_generate_dates
     field1 <- 'strDateGenerate'
     field2 <- 'strDateGenerate'
@@ -228,16 +228,16 @@ shinyServer(function(input, output) {
     str_rows_accts <- restrictSTRaccts()
     str_rows_admin <- restrictSTRadmissions()
     vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin)
-    return(str_df[Reduce(intersect, vals),])
+    str_reduced <- str_df[Reduce(intersect, vals),] %>% mutate(month = format(strDateGenerate, "%m"), year = format(strDateGenerate, "%Y"))
+    str_reduced$date <- as.Date(paste(str_reduced$year, str_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
+    return(str_reduced)
   })
   
   plot_str_hist <- reactive({
     str_display <- restrictSTR()
     
-    str_by_month = str_display %>% mutate(month = format(strDateGenerate, "%m"), year = format(strDateGenerate, "%Y")) %>% 
-      group_by(month, year, fullNameOfFinancialInstitution) %>% summarise(total = sum(amountOfCash), count = n())
+    str_by_month = str_display %>% group_by(date, fullNameOfFinancialInstitution) %>% summarise(total = sum(amountOfCash), count = n())
     
-    str_by_month$date = as.Date(paste(str_by_month$year, str_by_month$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
     agg_str = str_by_month %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
     
     str_hist <- ggplot(str_by_month, aes(date, total)) + 
