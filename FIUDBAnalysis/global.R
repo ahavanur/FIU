@@ -7,6 +7,14 @@ library(shiny)
 library(gridExtra)
 library(leaflet)
 library(lubridate)
+library(tidytext)
+library(stopwords)
+library(wordcloud)
+library(RColorBrewer)
+library(GOsummaries)
+library(textstem)
+
+
 path = "/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/"
 ctr_df = read.csv(paste(path,"CTRs.csv",sep=''))
 str_df = read.csv(paste(path,"STRs.csv",sep=''))
@@ -40,6 +48,13 @@ stracct_df = separate_rows(str_df,accountNumbers,sep="/")
 stracct_df = separate_rows(stracct_df,accountNumbers,sep=",")
 stracct_agg = stracct_df %>% group_by(STRID) %>% summarise(count = n()) 
 
+
+make_stopwords <- function(){
+  stops = stopwords("en")
+  css_chars = c("br", "nbsp", "amp")
+  return(c(stops, css_chars, letters))
+}
+common_stopwords = make_stopwords()
 restrict_banks = function(df, input_banks) {
   #choosing banks
   if (length(input_banks) == 0) {

@@ -177,7 +177,7 @@ shinyServer(function(input, output) {
         }
       }
     else {
-      plotOutput("str_plot", height="800")
+      plotOutput("str_plot", height="1200")
     }
   )
   
@@ -256,14 +256,40 @@ shinyServer(function(input, output) {
     str_hist <- str_hist + 
       geom_text(aes(label = paste("$",as.character(total), sep="")), data = agg_str_iso, stat = 'identity', angle = 90, position = position_stack(vjust = .5)) +
       geom_text(aes(label = count), data = agg_str_iso, stat = 'identity', vjust = -1)
-    
+    str_hist <- str_hist
     str_hist
   })
   
+  tf_idf_df <- reactive({
+    str_display <- restrictSTR()
+    narrativetext = str_display[,c('STRID', 'narrative')]
+    narrative_counts = narrativetext %>% unnest_tokens(word, narrative) %>% count(STRID, word, sort = TRUE) %>%
+      ungroup()
+    numbers = narrative_counts$word[which(!is.na(as.numeric(as.character(gsub("[[:punct:]]", "", narrative_counts$word)))))]
+    stopwords_full = c(common_stopwords, numbers)
+    narrative_counts = narrative_counts[-which(narrative_counts$word %in% stopwords_full),]
+    narrative_counts$word = lemmatize_words(narrative_counts$word)
+    total_words <- narrative_counts %>% group_by(STRID) %>% summarize(total = sum(n))
+    narrative_counts <- left_join(narrative_counts, total_words, by = 'STRID')
+    narrative_counts <- narrative_counts %>%
+      bind_tf_idf(word, STRID, n)
+    narrative_counts = narrative_counts %>% mutate(word = word) %>% group_by(word) %>% 
+      summarise(avg_tf_idf = mean(tf_idf), count = n())
+    return(narrative_counts)
+  })
+
+  
+  str_cloud <- reactive({
+    narrative_counts <- tf_idf_df()
+    narrative_counts$freq = narrative_counts$avg_tf_idf*narrative_counts$count
+    set.seed(1234)
+    cloud = plotWordcloud(narrative_counts$word, freq = narrative_counts$freq,rot.per = 0.1, colors=brewer.pal(8, "Accent"), scale = 0.1, tryfit = FALSE, max_min = c(1, 0.05), min.freq = min(narrative_counts$freq), max.words = 25, grob = TRUE, dimensions = unit(c(2, 0.9), "npc"))
+    cloud})
+  
   output$str_plot <- 
     renderPlot({
-      a = list(pt1(), plot_str_hist())
-      grid.arrange(grobs=a)
+      a = list(plot_str_hist(), str_cloud())
+      grid.arrange(grobs=a,heights = c(600,600))
       })
     
   
