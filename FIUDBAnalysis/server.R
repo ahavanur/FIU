@@ -170,10 +170,10 @@ shinyServer(function(input, output) {
   output$str_ui <- renderUI(
       if (input$str_bank_iso) {
         if (length(input$str_banks) != 0) {
-          plotOutput("str_plot", height=as.character(600*length(input$str_banks))) 
+          plotOutput("str_plot", height=as.character(500*(length(input$str_banks))))
         }
         else {
-          plotOutput("str_plot", height="1200")
+          plotOutput("str_plot", height="1500")
         }
       }
     else {
@@ -220,6 +220,30 @@ shinyServer(function(input, output) {
     return(seq(1,nrow(str_df)))
   })
   
+  getOccupations <- eventReactive(input$str_occupation_button, {
+    str_occupations <<- c(str_occupations, input$str_occupation)
+  })
+  
+  restrictSTRoccupations <- reactive ({
+    getOccupations()
+    str_occupations <<- str_occupations[!(str_occupations=="")]
+    if (length(str_occupations) != 0) {
+      temp = str_df
+      temp$original_index = seq(1,nrow(temp))
+      temp = separate_rows(temp, "occupationOrTypeOfBusiness", sep="/")
+      temp = separate_rows(temp, "occupationOrTypeOfBusiness", sep=" ")
+      temp = separate_rows(temp, "occupationOrTypeOfBusiness", sep="-")
+      temp$occupationOrTypeOfBusiness = lemmatize_strings(toupper(temp$occupationOrTypeOfBusiness))
+      distances = as.data.frame(1-stringdistmatrix(temp$occupationOrTypeOfBusiness, toupper(str_occupations), method = "jw"))
+      distances$max_similarity = apply(distances,1,max)
+      return(unique(temp$original_index[which(distances$max_similarity > 0.75)]))
+    }
+    else {
+      return(seq(1,nrow(str_df)))
+    }
+  })
+  
+  
   restrictSTR <- reactive ({
     str_rows_banks <- restrictSTRbanks()
     str_rows_gen_dates <- restrictSTRdatesGenerate()
@@ -227,15 +251,16 @@ shinyServer(function(input, output) {
     str_rows_cash <- restrictSTRcashAmount()
     str_rows_accts <- restrictSTRaccts()
     str_rows_admin <- restrictSTRadmissions()
-    vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin)
+    str_occupation_rows <- restrictSTRoccupations()
+    vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin,str_occupation_rows)
     str_reduced <- str_df[Reduce(intersect, vals),] %>% mutate(month = format(strDateGenerate, "%m"), year = format(strDateGenerate, "%Y"))
     str_reduced$date <- as.Date(paste(str_reduced$year, str_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
+    View(str_reduced)
     return(str_reduced)
   })
   
   plot_str_hist <- reactive({
     str_display <- restrictSTR()
-    
     str_by_month = str_display %>% group_by(date, fullNameOfFinancialInstitution) %>% summarise(total = sum(amountOfCash), count = n())
     
     agg_str = str_by_month %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
@@ -256,15 +281,21 @@ shinyServer(function(input, output) {
     str_hist <- str_hist + 
       geom_text(aes(label = paste("$",as.character(total), sep="")), data = agg_str_iso, stat = 'identity', angle = 90, position = position_stack(vjust = .5)) +
       geom_text(aes(label = count), data = agg_str_iso, stat = 'identity', vjust = -1)
-    str_hist <- str_hist
+    print(paste(as.character(str_occupations), collapse=", "))
+    str_hist <- str_hist + ggtitle("STR Amounts By Month", subtitle = paste("Showing Occupations: ", paste(as.character(str_occupations), collapse=", ")))
     str_hist
   })
   
-  tf_idf_df <- reactive({
+  create_narrative_counts <- reactive({
     str_display <- restrictSTR()
     narrativetext = str_display[,c('STRID', 'narrative')]
     narrative_counts = narrativetext %>% unnest_tokens(word, narrative) %>% count(STRID, word, sort = TRUE) %>%
       ungroup()
+    return(narrative_counts)
+  })
+  
+  tf_idf_df <- reactive({
+    narrative_counts = create_narrative_counts()
     numbers = narrative_counts$word[which(!is.na(as.numeric(as.character(gsub("[[:punct:]]", "", narrative_counts$word)))))]
     stopwords_full = c(common_stopwords, numbers)
     narrative_counts = narrative_counts[-which(narrative_counts$word %in% stopwords_full),]
@@ -275,21 +306,22 @@ shinyServer(function(input, output) {
       bind_tf_idf(word, STRID, n)
     narrative_counts = narrative_counts %>% mutate(word = word) %>% group_by(word) %>% 
       summarise(avg_tf_idf = mean(tf_idf), count = n())
+    narrative_counts$freq = narrative_counts$avg_tf_idf*narrative_counts$count
     return(narrative_counts)
   })
 
   
-  str_cloud <- reactive({
+  plot_str_cloud <- reactive({
     narrative_counts <- tf_idf_df()
-    narrative_counts$freq = narrative_counts$avg_tf_idf*narrative_counts$count
-    set.seed(1234)
-    cloud = plotWordcloud(narrative_counts$word, freq = narrative_counts$freq,rot.per = 0.1, colors=brewer.pal(8, "Accent"), scale = 0.1, tryfit = FALSE, max_min = c(1, 0.05), min.freq = min(narrative_counts$freq), max.words = 25, grob = TRUE, dimensions = unit(c(2, 0.9), "npc"))
+    cloud = plotWordcloud(narrative_counts$word, freq = narrative_counts$freq,rot.per = 0, 
+                          colors=brewer.pal(8, "Accent"), scale = 0.1, tryfit = TRUE, max_min = c(1, 0.05), 
+                          min.freq = min(narrative_counts$freq), max.words = 25, grob = TRUE, dimensions = unit(c(2, 1), "npc"))
     cloud})
   
   output$str_plot <- 
     renderPlot({
-      a = list(plot_str_hist(), str_cloud())
-      grid.arrange(grobs=a,heights = c(600,600))
+      a = list(plot_str_hist(), plot_str_cloud())
+      grid.arrange(grobs=a, heights=c(600,500))
       })
     
   

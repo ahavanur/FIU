@@ -58,7 +58,8 @@ navbarPage("Navigation",
                                      value = 10^ceiling(log10(max(stracct_agg$count)))),
                         checkboxInput("str_admission", "Admission of Guilt", value=FALSE),
                         checkboxInput("str_bank_iso", "Show Banks Individually", value = FALSE),
-                        textInput("occupations", "Occupation", ""),
+                        textInput("str_occupation", "Occupation", ""),
+                        actionButton("str_occupation_button", "Add Occupation"),
                         width = 2
                       ),
                       mainPanel(uiOutput("str_ui"), width = 10)

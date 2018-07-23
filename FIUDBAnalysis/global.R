@@ -13,8 +13,9 @@ library(wordcloud)
 library(RColorBrewer)
 library(GOsummaries)
 library(textstem)
+library(stringdist)
 
-
+set.seed(1234)
 path = "/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/"
 ctr_df = read.csv(paste(path,"CTRs.csv",sep=''))
 str_df = read.csv(paste(path,"STRs.csv",sep=''))
@@ -68,7 +69,9 @@ restrict_banks = function(df, input_banks) {
 }
 
 restrict_range = function(df, field1, field2, ranges) {
-  rows_field1 <- which(df[,field1] >= ranges[1])
-  rows_field2 <- which(df[,field2] <= ranges[2])
+  rows_field1 <- which(df[,field1] >= ranges[1] | is.na(df[,field1]))
+  rows_field2 <- which(df[,field2] <= ranges[2] | is.na(df[,field2]))
   return(intersect(rows_field1, rows_field2))
 }
+
+str_occupations = c()
