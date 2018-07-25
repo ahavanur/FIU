@@ -14,6 +14,7 @@ library(RColorBrewer)
 library(GOsummaries)
 library(textstem)
 library(stringdist)
+library(stringr)
 
 set.seed(1234)
 path = "/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/"
@@ -69,9 +70,70 @@ restrict_banks = function(df, input_banks) {
 }
 
 restrict_range = function(df, field1, field2, ranges) {
-  rows_field1 <- which(df[,field1] >= ranges[1] | is.na(df[,field1]))
-  rows_field2 <- which(df[,field2] <= ranges[2] | is.na(df[,field2]))
+  rows_field1 <- which(df[,field1] >= ranges[1])
+  rows_field2 <- which(df[,field2] <= ranges[2])
   return(intersect(rows_field1, rows_field2))
 }
 
 str_occupations = c()
+str_narratives = c()
+
+restrict_terms = function(df,field,terms, threshold) {
+  if (length(terms) != 0) {
+    df[,field] <- lemmatize_strings(toupper(df[,field]))
+    distances = as.data.frame(1-stringdistmatrix(df[,field], toupper(terms), method = "jw"))
+    distances$max_similarity = apply(distances,1,max)
+    return(unique(df$original_index[which(distances$max_similarity > threshold)]))
+  }
+  else {
+    return(unique(df$original_index))
+  }
+}
+
+create_ui_select_inputs = function(df, field){
+  new_ui_list = str_replace_all(df[,field],"[^[:graph:]]", " ")
+  new_ui_list = str_replace_all(new_ui_list,"[[:punct:]]", " ")
+  new_ui_list = unlist(strsplit(new_ui_list, ">"))
+  new_ui_list = unlist(strsplit(new_ui_list, "<"))
+  new_ui_list = unlist(strsplit(new_ui_list, " "))
+  new_ui_list = unlist(strsplit(new_ui_list, "-"))
+  new_ui_list = unlist(strsplit(new_ui_list, "/"))
+  new_ui_list = unlist(strsplit(new_ui_list, ","))
+  if (length(which(new_ui_list %in% common_stopwords)) != 0)
+    new_ui_list = new_ui_list[-which(new_ui_list %in% common_stopwords)]
+  new_ui_list = toupper(lemmatize_strings(new_ui_list))
+  new_ui_list = tolower(names(sort(table(new_ui_list),decreasing=TRUE)))
+  return(new_ui_list)
+}
+
+str_ui_occupations = create_ui_select_inputs(str_df, 'occupationOrTypeOfBusiness')
+str_ui_narratives = create_ui_select_inputs(str_df, 'narrative')
+str_ui_lastname = create_ui_select_inputs(str_df, 'lastNameOrNameOfEntity')
+str_ui_firstname = create_ui_select_inputs(str_df, 'firstName')
+
+ctr_ui_lastname = create_ui_select_inputs(pit_df, 'lastNameOrNameOfEntity')
+ctr_ui_firstname = create_ui_select_inputs(pit_df, 'firstName')
+ctr_ui_occupations = create_ui_select_inputs(pit_df, 'occupationOrTypeOfBusiness')
+
+
+str_stringed = str_df[,c("firstName","lastNameOrNameOfEntity", "occupationOrTypeOfBusiness", "narrative")]
+str_stringed$original_index = seq(1,nrow(str_stringed))
+str_stringed$narrative = str_replace_all(str_stringed$narrative,"[^[:graph:]]", " ")
+str_stringed$occupationOrTypeOfBusiness = str_replace_all(str_stringed$occupationOrTypeOfBusiness,"[^[:graph:]]", " ")
+str_stringed = separate_rows(str_stringed, "occupationOrTypeOfBusiness", sep="/")
+str_stringed = separate_rows(str_stringed, "occupationOrTypeOfBusiness", sep=" ")
+str_stringed = separate_rows(str_stringed, "occupationOrTypeOfBusiness", sep="-")
+str_stringed = str_stringed[-which(str_stringed$occupationOrTypeOfBusiness %in% common_stopwords),]
+str_stringed = str_stringed %>% unnest_tokens(word, narrative)
+str_stringed = str_stringed[-which(str_stringed$word %in% common_stopwords),]
+str_stringed$occupationOrTypeOfBusiness = toupper(lemmatize_strings(str_stringed$occupationOrTypeOfBusiness))
+str_stringed$word = toupper(lemmatize_strings(str_stringed$word))
+
+pit_stringed = pit_df[,c("CTRID","firstName","lastNameOrNameOfEntity", "occupationOrTypeOfBusiness")]
+pit_stringed$original_index = seq(1,nrow(pit_stringed))
+pit_stringed$occupationOrTypeOfBusiness = str_replace_all(pit_stringed$occupationOrTypeOfBusiness,"[^[:graph:]]", " ")
+pit_stringed = separate_rows(pit_stringed, "occupationOrTypeOfBusiness", sep="/")
+pit_stringed = separate_rows(pit_stringed, "occupationOrTypeOfBusiness", sep=" ")
+pit_stringed = separate_rows(pit_stringed, "occupationOrTypeOfBusiness", sep="-")
+pit_stringed = pit_stringed[-which(pit_stringed$occupationOrTypeOfBusiness %in% common_stopwords),]
+pit_stringed$occupationOrTypeOfBusiness = toupper(lemmatize_strings(pit_stringed$occupationOrTypeOfBusiness))

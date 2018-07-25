@@ -57,13 +57,32 @@ shinyServer(function(input, output) {
     return(which(ctr_df$CTRID %in% range_account_ctrs))
   })
   
+  restrictCTRoccupations <- reactive({    
+    range_occupation_ctrs = restrict_terms(pit_stringed,"occupationOrTypeOfBusiness", input$ctr_occupation,0.75)
+    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID[range_occupation_ctrs])))
+  })
+  
+  restrictCTRlastnames <- reactive({
+    range_lastname_ctrs = restrict_terms(pit_stringed,"lastNameOrNameOfEntity", input$ctr_lastname,0.75)
+    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID[range_lastname_ctrs])))
+  })
+  
+  restrictCTRfirstnames <- reactive({
+    range_firstname_ctrs = restrict_terms(pit_stringed,"firstName", input$ctr_firstname,0.75)
+    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID[range_firstname_ctrs])))
+  })
+
+  
   restrictCTR <- reactive ({
     ctr_rows_banks <- restrictCTRBanks()
     ctr_rows_direction <- restrictCTRDirection()
     ctr_rows_dates <- restrictCTRDatesGenerate()
     ctr_rows_cash <- restrictCTRcashAmount()
     ctr_rows_accts <- restrictCTRaccts()
-    vals <- list(ctr_rows_banks,ctr_rows_direction,ctr_rows_dates,ctr_rows_cash,ctr_rows_accts)
+    ctr_occupation_rows <- restrictCTRoccupations()
+    ctr_lastname_rows <- restrictCTRlastnames()
+    ctr_firstname_rows <- restrictCTRfirstnames()
+    vals <- list(ctr_rows_banks,ctr_rows_direction,ctr_rows_dates,ctr_rows_cash,ctr_rows_accts,ctr_occupation_rows,ctr_lastname_rows,ctr_firstname_rows)
     ctr_reduced = ctr_df[Reduce(intersect,vals),] %>% mutate(month = format(dateOfTransaction, "%m"), year = format(dateOfTransaction, "%Y"))
     ctr_reduced$date = as.Date(paste(ctr_reduced$year, ctr_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
     return(ctr_reduced)
@@ -220,29 +239,21 @@ shinyServer(function(input, output) {
     return(seq(1,nrow(str_df)))
   })
   
-  getOccupations <- eventReactive(input$str_occupation_button, {
-    str_occupations <<- c(str_occupations, input$str_occupation)
-  })
-  
   restrictSTRoccupations <- reactive ({
-    getOccupations()
-    str_occupations <<- str_occupations[!(str_occupations=="")]
-    if (length(str_occupations) != 0) {
-      temp = str_df
-      temp$original_index = seq(1,nrow(temp))
-      temp = separate_rows(temp, "occupationOrTypeOfBusiness", sep="/")
-      temp = separate_rows(temp, "occupationOrTypeOfBusiness", sep=" ")
-      temp = separate_rows(temp, "occupationOrTypeOfBusiness", sep="-")
-      temp$occupationOrTypeOfBusiness = lemmatize_strings(toupper(temp$occupationOrTypeOfBusiness))
-      distances = as.data.frame(1-stringdistmatrix(temp$occupationOrTypeOfBusiness, toupper(str_occupations), method = "jw"))
-      distances$max_similarity = apply(distances,1,max)
-      return(unique(temp$original_index[which(distances$max_similarity > 0.75)]))
-    }
-    else {
-      return(seq(1,nrow(str_df)))
-    }
+    return(restrict_terms(str_stringed, "occupationOrTypeOfBusiness", input$str_occupation, 0.75))
   })
   
+  restrictSTRnarratives <- reactive ({
+    return(restrict_terms(str_stringed, "word", input$str_narrative, 0.75))
+  })
+  
+  restrictSTRlastnames <- reactive ({
+    return(restrict_terms(str_stringed, "lastNameOrNameOfEntity", input$str_lastname, 0.75))
+  })
+  
+  restrictSTRfirstnames <- reactive ({
+    return(restrict_terms(str_stringed, "firstName", input$str_firstname, 0.75))
+  })
   
   restrictSTR <- reactive ({
     str_rows_banks <- restrictSTRbanks()
@@ -252,10 +263,12 @@ shinyServer(function(input, output) {
     str_rows_accts <- restrictSTRaccts()
     str_rows_admin <- restrictSTRadmissions()
     str_occupation_rows <- restrictSTRoccupations()
-    vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin,str_occupation_rows)
+    str_narrative_rows <- restrictSTRnarratives()
+    str_lastname_rows <- restrictSTRlastnames()
+    str_firstname_rows <- restrictSTRfirstnames()
+    vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin,str_occupation_rows, str_narrative_rows,str_lastname_rows,str_firstname_rows)
     str_reduced <- str_df[Reduce(intersect, vals),] %>% mutate(month = format(strDateGenerate, "%m"), year = format(strDateGenerate, "%Y"))
     str_reduced$date <- as.Date(paste(str_reduced$year, str_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
-    View(str_reduced)
     return(str_reduced)
   })
   
@@ -281,8 +294,32 @@ shinyServer(function(input, output) {
     str_hist <- str_hist + 
       geom_text(aes(label = paste("$",as.character(total), sep="")), data = agg_str_iso, stat = 'identity', angle = 90, position = position_stack(vjust = .5)) +
       geom_text(aes(label = count), data = agg_str_iso, stat = 'identity', vjust = -1)
-    print(paste(as.character(str_occupations), collapse=", "))
-    str_hist <- str_hist + ggtitle("STR Amounts By Month", subtitle = paste("Showing Occupations: ", paste(as.character(str_occupations), collapse=", ")))
+    if (length(input$str_occupation) != 0) {
+      subtitle_occupations = paste("Occupations:", paste(input$str_occupation, collapse=", "), "\n")
+    } 
+    else {
+      subtitle_occupations = NULL
+    }
+    if (length(input$str_narrative) != 0) {
+      subtitle_narratives = paste("Narrative Keywords:", paste(input$str_narrative,collapse=", "), "\n")
+    }
+    else {
+      subtitle_narratives = NULL
+    }
+    if (length(input$str_firstname) != 0) {
+      subtitle_firstname = paste("First Names:", paste(input$str_firstname,collapse=", "), "\n")
+    }
+    else {
+      subtitle_firstname = NULL
+    }
+    if (length(input$str_lastname) != 0) {
+      subtitle_lastname = paste("Last Names:", paste(input$str_lastname,collapse=", "), "\n")
+    }
+    else {
+      subtitle_lastname = NULL
+    }
+    subtitlefull = paste(subtitle_occupations, subtitle_narratives, subtitle_firstname, subtitle_lastname, sep = "")
+    str_hist <- str_hist + ggtitle("STR Amounts By Month", subtitle = subtitlefull)
     str_hist
   })
   
@@ -313,7 +350,10 @@ shinyServer(function(input, output) {
   
   plot_str_cloud <- reactive({
     narrative_counts <- tf_idf_df()
-    cloud = plotWordcloud(narrative_counts$word, freq = narrative_counts$freq,rot.per = 0, 
+    if (max(narrative_counts$freq) <= 0) {
+      narrative_counts$freq <- narrative_counts$count
+    }
+    cloud = plotWordcloud(narrative_counts$word, freq = narrative_counts$freq, rot.per = 0, 
                           colors=brewer.pal(8, "Accent"), scale = 0.1, tryfit = TRUE, max_min = c(1, 0.05), 
                           min.freq = min(narrative_counts$freq), max.words = 25, grob = TRUE, dimensions = unit(c(2, 1), "npc"))
     cloud})
