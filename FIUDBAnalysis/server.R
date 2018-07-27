@@ -210,14 +210,28 @@ shinyServer(function(input, output) {
     dates <- input$str_generate_dates
     field1 <- 'strDateGenerate'
     field2 <- 'strDateGenerate'
-    return(restrict_range(str_df, field1, field2, dates))
+    valid_dates <- restrict_range(str_df, field1, field2, dates)
+    if (all(input$str_generate_dates == c(min(str_df$strDateGenerate,na.rm=TRUE), today()))) {
+      #if the dates are the defaults, then include the NA valued dates
+      na_dates = which(is.na(str_df$strDateGenerate))
+      return(c(na_dates, valid_dates))
+    }
+    else{
+      return(valid_dates)
+    }
   })
   
   restrictSTRdatesActivity <- reactive({
     dates <- input$str_sus_dates
     field1 <- 'startDateOfSuspiciousActivity'
     field2 <- 'endDateOfSuspiciousActivity'
-    return(restrict_range(str_df, field1, field2, dates))
+    valid_dates = restrict_range(str_df, field1, field2, dates)
+    if (all(input$str_sus_dates == c(min(str_df$startDateOfSuspiciousActivity,na.rm=TRUE), today()))) {
+      #if the dates are the defaults, then include the NA valued dates
+      na_dates = which(is.na(str_df$startDateOfSuspiciousActivity) | is.na(str_df$endDateOfSuspiciousActivity))
+      return(c(na_dates, valid_dates))
+    }
+    return(valid_dates)
   })
   
   restrictSTRcashAmount <- reactive ({
@@ -255,6 +269,10 @@ shinyServer(function(input, output) {
     return(restrict_terms(str_stringed, "firstName", input$str_firstname, 0.75))
   })
   
+  restrictSTRcharacterization <- reactive ({
+    return(restrict_terms(str_stringed, "summaryCharacterization", input$str_characterization, 0.75))
+  })
+  
   restrictSTR <- reactive ({
     str_rows_banks <- restrictSTRbanks()
     str_rows_gen_dates <- restrictSTRdatesGenerate()
@@ -264,9 +282,10 @@ shinyServer(function(input, output) {
     str_rows_admin <- restrictSTRadmissions()
     str_occupation_rows <- restrictSTRoccupations()
     str_narrative_rows <- restrictSTRnarratives()
+    str_characterization_rows <- restrictSTRcharacterization()
     str_lastname_rows <- restrictSTRlastnames()
     str_firstname_rows <- restrictSTRfirstnames()
-    vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin,str_occupation_rows, str_narrative_rows,str_lastname_rows,str_firstname_rows)
+    vals <- list(str_rows_banks,str_rows_gen_dates,str_rows_sus_dates,str_rows_cash,str_rows_accts,str_rows_admin,str_occupation_rows, str_narrative_rows,str_characterization_rows, str_lastname_rows,str_firstname_rows)
     str_reduced <- str_df[Reduce(intersect, vals),] %>% mutate(month = format(strDateGenerate, "%m"), year = format(strDateGenerate, "%Y"))
     str_reduced$date <- as.Date(paste(str_reduced$year, str_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
     return(str_reduced)
@@ -274,6 +293,8 @@ shinyServer(function(input, output) {
   
   plot_str_hist <- reactive({
     str_display <- restrictSTR()
+    # x <- rbind(str_display, str_df)
+    # View(x[! duplicated(x, fromLast=TRUE) & seq(nrow(x)) <= nrow(str_display), ])
     str_by_month = str_display %>% group_by(date, fullNameOfFinancialInstitution) %>% summarise(total = sum(amountOfCash), count = n())
     
     agg_str = str_by_month %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
@@ -294,6 +315,8 @@ shinyServer(function(input, output) {
     str_hist <- str_hist + 
       geom_text(aes(label = paste("$",as.character(total), sep="")), data = agg_str_iso, stat = 'identity', angle = 90, position = position_stack(vjust = .5)) +
       geom_text(aes(label = count), data = agg_str_iso, stat = 'identity', vjust = -1)
+    subtitle_count = paste("Total STRs Shown:",as.character(nrow(str_display)),"\n")
+    subtitle_amount = paste("Total STR Amounts Shown:", as.character(sum(str_by_month$total)),"\n")
     if (length(input$str_occupation) != 0) {
       subtitle_occupations = paste("Occupations:", paste(input$str_occupation, collapse=", "), "\n")
     } 
@@ -318,7 +341,14 @@ shinyServer(function(input, output) {
     else {
       subtitle_lastname = NULL
     }
-    subtitlefull = paste(subtitle_occupations, subtitle_narratives, subtitle_firstname, subtitle_lastname, sep = "")
+    
+    if (length(input$str_characterization) != 0) {
+      subtitle_characterization = paste("Characterizations:", paste(input$str_characterization,collapse=", "), "\n")
+    }
+    else {
+      subtitle_characterization = NULL
+    }
+    subtitlefull = paste(subtitle_count,subtitle_amount,subtitle_occupations, subtitle_narratives, subtitle_firstname, subtitle_lastname,subtitle_characterization, sep = "")
     str_hist <- str_hist + ggtitle("STR Amounts By Month", subtitle = subtitlefull)
     str_hist
   })

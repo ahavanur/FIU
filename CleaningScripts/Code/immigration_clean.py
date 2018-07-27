@@ -56,6 +56,7 @@ def main(path,caseID):
 	dirs = path.split("/")
 	name = dirs[-1]
 	name = "UPDATED_" + name
+	name = name.replace(".xlsx", ".csv")
 	name = name.replace(".xls", ".csv")
 	outpath = "/".join(dirs[:len(dirs)-1]) + "/" + name
 	with open(outpath, 'w') as fout:
@@ -80,8 +81,14 @@ def extractPermitInfo(sh,wb):
 		values = ['' for i in range(7)]
 	else:
 		values = non_empty
-		values[4] = fixdate(values[4], wb)
-		values[5] = fixdate(values[5], wb)
+		try:
+			values[4] = fixdate(values[4], wb)
+		except:
+			pass
+		try:
+			values[5] = fixdate(values[5], wb)
+		except:
+			pass
 	return clean(values)
 
 def extractMovements(sh,wb):
@@ -96,8 +103,14 @@ def extractMovements(sh,wb):
 		extracted = []
 		for idx in extract_idx:
 			extracted.append(row[idx])
-		extracted[4] = fixdate(extracted[4], wb)
-		extracted[8] = fixdate(extracted[8], wb)
+		try:
+			extracted[4] = fixdate(extracted[4], wb)
+		except:
+			pass
+		try:
+			extracted[8] = fixdate(extracted[8], wb)
+		except:
+			pass
 		movements.append(clean(extracted))
 	return movements
 
@@ -112,25 +125,30 @@ def run(caseID):
 	except:
 		pass
 
-caseID = None
-def show_entry_fields():
-	global caseID
-	caseID = e1.get()
-	master.destroy()
+caseID = "12"
+# def show_entry_fields():
+# 	global caseID
+# 	caseID = e1.get()
+# 	master.destroy()
 
-master = Tk()
-master.title("Immigration Data Cleaning Tool")
+# master = Tk()
+# master.title("Immigration Data Cleaning Tool")
 
-Label(master, text="CASEID").grid(row=0)
+# Label(master, text="CASEID").grid(row=0)
 
-e1 = Entry(master)
+# e1 = Entry(master)
 
-e1.grid(row=0, column=1)
+# e1.grid(row=0, column=1)
 
-Button(master, text='Submit Case ID', command=show_entry_fields).grid(row=3, column=1, sticky=W, pady=4)
-mainloop( )
-run(caseID)
-
+# Button(master, text='Submit Case ID', command=show_entry_fields).grid(row=3, column=1, sticky=W, pady=4)
+# mainloop()
+#run(caseID)
+folder = "/Users/apoorvahavanur/Desktop/Immigration2/"
+for file in os.listdir(folder):
+	print "looped"
+	print folder+file
+	if (folder+file).endswith(".xlsx"):
+		main(folder+file, caseID)
 #can you have multiple permits?
 #USA-FSM-RMI/ values 
 #Any of this uneeded
