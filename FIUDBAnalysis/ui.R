@@ -37,9 +37,20 @@ navbarPage("Navigation",
            tabPanel("Immigration & Customs Summary", fluidPage(sidebarLayout(
                       sidebarPanel(
                         dateRangeInput("imm_dates", "Date Range", start = '2015-01-01', end = today(), format = 'mm-dd-yyyy', separator = "-"),
-                        checkboxInput("imm_permit", "Holds Permit", value = FALSE), width = 2)
-                      ,
-                      mainPanel(uiOutput('imm_ui'), width = 10)))),
+                        selectizeInput("imm_cities", "Cities", city_df$loc, multiple=TRUE),
+                        selectizeInput("imm_firstnames", "First Name", unique(immigration_df$First.and.Middle.Name), multiple=TRUE),
+                        selectizeInput("imm_lastnames", "Last Name", unique(immigration_df$Last.Name), multiple=TRUE),
+                        checkboxInput("cus_person_iso", "Show People Individually", value = FALSE),
+                        checkboxInput("cus_net", "Show Net Cash Direction", value = FALSE),
+                        selectizeInput("imm_airlines", "Airlines", unique(unlist(strsplit(immigration_df$flight, split = " "))[c(TRUE,FALSE)]), multiple=TRUE),
+                        selectizeInput("imm_caseid", "CASE ID", unique(immigration_df$CASEID), multiple=FALSE),
+                        numericInput("imm_min_cash", 
+                                     "Min. Cash Amount", 
+                                     value = 0),
+                        numericInput("imm_max_cash", 
+                                     "Max. Cash Amount", 
+                                     value = 10^(ceiling(log10(max(customs_df$Currency.Amount)))+1)),width=2),
+                      mainPanel(leafletOutput("imm_map"), plotOutput("imm_plot"), width = 10)))),
            tabPanel("STR Summary", fluidPage(sidebarLayout(
                       sidebarPanel(
                         checkboxGroupInput("str_banks", "Banks", choices = 

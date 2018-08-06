@@ -174,6 +174,201 @@ shinyServer(function(input, output) {
           }
           w_d_total
       }})
+  
+  restrictImmigrationDates <- reactive({
+    dates <- input$imm_dates
+    field1 <- 'Travel.Date'
+    field2 <- 'Travel.Date'
+    valid_dates = restrict_range(immigration_df, field1, field2, dates)
+    return(valid_dates)
+  })
+  
+  restrictImmigrationCountries <- reactive({
+    if (length(input$imm_cities) != 0)
+      return(which(immigration_df$Departs %in% input$imm_countries | immigration_df$Arrives %in% input$imm_countries))
+    else {
+      return(seq(1,nrow(immigration_df)))
+    }
+  })
+  
+  restrictImmigrationLastNames <- reactive({
+    if (length(input$imm_lastnames) != 0)
+      return(which(immigration_df$Last.Name %in% input$imm_lastnames))
+    else {
+      return(seq(1,nrow(immigration_df)))
+    }
+  })
+  
+  restrictImmigrationFirstNames <- reactive({
+    if (length(input$imm_firstnames) != 0)
+      return(which(immigration_df$First.and.Middle.Name %in% input$imm_firstnames))
+    else {
+      return(seq(1,nrow(immigration_df)))
+    }
+  })
+  
+  restrictImmigrationAirlines <- reactive({
+    temp_df = immigration_df
+    temp_df$original_index = seq(1,nrow(immigration_df))
+    return(restrict_terms(temp_df, "flight", input$imm_airlines, 0.75))
+  })
+  
+  restrictImmigrationCASEID <- reactive({
+    if (is.null(input$imm_caseid)) {
+      return(which(as.numeric(immigration_df$CASEID) == as.numeric(input$imm_caseid)))}
+    else{
+      return(seq(1,nrow(immigration_df)))
+    }
+  })
+  
+  restrictImmigrationCitizenship <- reactive({
+    temp_df = immigration_df
+    temp_df$original_index = seq(1,nrow(immigration_df))
+    return(restrict_terms(temp_df, "Citizenship", input$imm_citizenships, 0.75))
+  })
+  
+  restrictImmigration <- reactive({
+    imm_date_rows <- restrictImmigrationDates()
+    imm_country_rows <- restrictImmigrationCountries()
+    imm_lastname_rows <- restrictImmigrationLastNames()
+    imm_firstname_rows <- restrictImmigrationFirstNames()
+    imm_airline_rows <- restrictImmigrationAirlines()
+    imm_caseid_rows <- restrictImmigrationCASEID()
+    imm_citizenship_rows <- restrictImmigrationCitizenship()
+    vals <- list(imm_date_rows,imm_country_rows,imm_lastname_rows,imm_firstname_rows,imm_airline_rows,imm_caseid_rows,imm_citizenship_rows)
+    imm_reduced = immigration_df[Reduce(intersect,vals),] %>% mutate(month = format(Travel.Date, "%m"), year = format(Travel.Date, "%Y"))
+    imm_reduced$date = as.Date(paste(imm_reduced$year, imm_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
+    return(imm_reduced)
+  })
+  
+  
+  output$imm_map <- renderLeaflet({
+    immigration_display <- restrictImmigration()
+    leaflet() %>% addTiles() %>% setView(lng = arrive_lon, lat = arrive_lat, zoom =4) %>% 
+      addCircleMarkers(data = immigration_display, lng = ~depart_lon, lat = ~depart_lat, clusterOptions = markerClusterOptions(spiderfyOnMaxZoom = FALSE, zoomToBoundsOnClick = FALSE))
+  })
+  
+  restrictCustomsDates <- reactive({
+    dates <- input$imm_dates
+    field1 <- 'Date.Of.Report'
+    field2 <- 'Date.Of.Report'
+    valid_dates = restrict_range(customs_df, field1, field2, dates)
+    return(valid_dates)
+  })
+
+  restrictCustomsLastNames <- reactive({
+    if (length(input$imm_lastnames) != 0)
+      return(which(customs_df$Last.Name %in% input$imm_lastnames))
+    else {
+      return(seq(1,nrow(customs_df)))
+    }
+  })
+  
+  restrictCustomsFirstNames <- reactive({
+    if (length(input$imm_firstnames) != 0)
+      return(which(customs_df$First.Name %in% input$imm_firstnames))
+    else {
+      return(seq(1,nrow(customs_df)))
+    }
+  })
+  
+  restrictCustomsAirlines <- reactive({
+    temp_df = customs_df
+    temp_df$original_index = seq(1,nrow(customs_df))
+    return(restrict_terms(temp_df, "Flight", input$imm_airlines, 0.75))
+  })
+  
+  restrictCustomsCASEID <- reactive({
+    if (is.null(input$imm_caseid)) {
+      return(which(as.numeric(customs_df$CASEID) == as.numeric(input$imm_caseid)))}
+    else{
+      return(seq(1,nrow(customs_df)))
+    }
+  })
+
+  restrictCustomsAmount <- reactive({
+    cash_range <- c(input$imm_min_cash, input$imm_max_cash)
+    field1 <- 'Currency.Amount'
+    field2 <- 'Currency.Amount'
+    return(restrict_range(customs_df, field1, field2, cash_range))
+  })
+  
+  
+  restrictCustoms <- reactive({
+    cus_date_rows <- restrictCustomsDates()
+    cus_lastname_rows <- restrictCustomsLastNames()
+    cus_firstname_rows <- restrictCustomsFirstNames()
+    cus_airline_rows <- restrictCustomsAirlines()
+    cus_caseid_rows <- restrictCustomsCASEID()
+    cus_currency_rows <- restrictCustomsAmount()
+    vals <- list(cus_date_rows,cus_lastname_rows,cus_firstname_rows,cus_airline_rows,cus_caseid_rows,cus_currency_rows)
+    cus_reduced = customs_df[Reduce(intersect,vals),] %>% mutate(month = format(Date.Of.Report, "%m"), year = format(Date.Of.Report, "%Y"))
+    cus_reduced$date = as.Date(paste(cus_reduced$year, cus_reduced$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
+    return(cus_reduced)
+  })
+  
+  output$imm_plot <- renderPlot({
+    customs_display <- restrictCustoms()
+    customs_display$fullname <- paste(customs_display$First.Name, customs_display$Last.Name)
+    customs_display$direction <- ifelse(toupper(customs_display$Shipment.Point.Of.Arrival) == "PALAU", "Arriving", "Leaving")
+    cus_by_month <- customs_display %>% group_by(date, fullname,direction) %>% summarise(total = sum(Currency.Amount), count = n())
+    agg_cus = cus_by_month %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
+    
+    arriving = cus_by_month[which(cus_by_month$direction == 'Arriving'),]
+    departing = cus_by_month[which(cus_by_month$direction == 'Leaving'),]
+    
+    departing$total = -1 * departing$total 
+    departing$count = -1 * departing$count
+    
+    net = merge(arriving, departing, by = c("date", "fullname"))
+    net$total = net$total.x + net$total.y
+    net$count = net$count.x + net$count.y
+    agg_arriving = arriving %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
+    agg_departing = departing %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
+    #this is a series of incredibly stupid lines in order to get the label marks just right
+    rnge_df = agg_cus
+    rnge = seq(-1.5*round(max(rnge_df$total, na.rm = TRUE)), max(rnge_df$total)*1.1, 1)
+    max_rnge = max(rnge) - floor(max(rnge)%%(10^floor(log10(max(rnge)))))
+    min_rnge = -1*(abs(min(rnge)) - floor(abs(min(rnge))%%(10^floor(log10(abs(min(rnge)))))))
+    rnge = round(rnge[(round(rnge%%10^(floor(log10(max(rnge)))))%%(10^(floor(log10(max(rnge))))))==0])
+    rnge = c(min_rnge, rnge, max_rnge)
+    #monstrosity over
+    
+    a_d_total <- ggplot(NULL, aes(date, total)) + 
+      geom_bar(stat = "identity", aes(fill = fullname), data = arriving, fill = "forest green") +
+      theme(text = element_text(size=15), axis.text.x = element_text(angle = 90, hjust = 1), axis.text.y = (element_text(size=15)))+ scale_y_continuous(breaks=rnge, label=comma) +
+      scale_x_date(breaks = date_breaks("months"), labels = date_format("%b-%Y")) + ylab("Total Amount ($)") + xlab("Date")
+    #add withdrawals
+    if (nrow(departing) != 0) {
+      a_d_total <- a_d_total + geom_bar(stat = "identity", aes(fill = fullname), data = departing, fill = "red")
+    } 
+    #add net 
+    if (input$cus_net) {
+      a_d_total <- a_d_total + 
+        stat_summary(data = net, fun.y = sum, geom = 'line', color = "dark blue", size = 2) +
+        ggtitle("Customs Cash Flow", subtitle = "Arriving Money in Green, Departing in Red, Net in Blue")
+    }
+    else {
+      a_d_total <- a_d_total + ggtitle("CTR Cash Flow Per Bank", subtitle = "Arriving Money in Green, Departing in Red")
+    }
+    #showing all banks seperately
+    if (input$cus_person_iso) {
+      departing_iso_use = departing
+      arriving_iso_use = arriving
+      a_d_total <- a_d_total + facet_wrap(~fullname, dir='v', scale = 'free')
+    }
+    else {
+      arriving_iso_use = agg_arriving
+      departing_iso_use = agg_departing
+    }
+    #adding labels to each bar 
+    a_d_total = a_d_total + geom_text(aes(label = paste("$",as.character(total), sep="")), data = arriving_iso_use, stat = 'identity', angle = 90, position = position_stack(vjust = .5)) +
+      geom_text(aes(label = count), data = arriving_iso_use, stat = 'identity', vjust = -1)
+    a_d_total = a_d_total + geom_text(aes(label = paste("$",as.character(-1*total), sep="")), data = departing_iso_use, stat = 'identity', angle = 90, position = position_stack(vjust = .5))+
+      geom_text(aes(label = -1*count), data = departing_iso_use, stat = 'identity', vjust=1.5)
+    a_d_total
+  })
+  
   pt1 <- reactive({
     if (!input$imm_permit) return(NULL)
     qplot(rnorm(500),fill=I("red"),binwidth=0.2,main="plotgraph1")

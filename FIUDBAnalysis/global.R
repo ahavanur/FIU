@@ -31,10 +31,11 @@ city_df = read.csv(paste(path,"CityLocations.csv",sep=''))
 
 immigration_df$flight = paste(immigration_df$Carrier, immigration_df$Voyage)
 immigration_df$fullflight = paste(immigration_df$Carrier, immigration_df$Voyage, immigration_df$Travel.Status)
+immigration_df$Travel.Date = as.Date(strptime(immigration_df$Travel.Date, "%m/%d/%y"))
 flights_df$Type = toupper(flights_df$Type)
 flights_df$fullflight = paste(flights_df$Flight, flights_df$Type)
 flightmatch_df = as.data.frame(1-stringdistmatrix(immigration_df$fullflight, flights_df$fullflight, method = "jw"))
-flightmatch_df$bestmatch = flights_df$fullflight[apply(a,1,which.max)]
+flightmatch_df$bestmatch = flights_df$fullflight[apply(flightmatch_df,1,which.max)]
 flightmatch_df = flights_df[match(flightmatch_df$bestmatch, flights_df$fullflight),]
 immigration_df = cbind(immigration_df, flightmatch_df)
 immigration_df = immigration_df[,c("ImmigrationID","CASEID","First.and.Middle.Name","Last.Name","Citizenship","Employer.Sponsor","Travel.Date","Travel.Status","flight","Departs","Arrives")]
@@ -47,25 +48,27 @@ arrive_loc_df = city_df[match(immigration_df$Arrives,city_df$loc),]
 
 immigration_df$arrive_lat = arrive_loc_df$lat
 immigration_df$arrive_lon = arrive_loc_df$lon
-arrive_lat = mean(immigration_df$arrive_lat)
-arrive_lon = mean(immigration_df$arrive_lon)
-immigration_df_coords = data.frame(group = immigration_df$Travel.Status,
-                                   lat = c(immigration_df$depart_lat, immigration_df$arrive_lat),
-                                   long = c(immigration_df$depart_lon, immigration_df$arrive_lon))
-arrivals = immigration_df[which(immigration_df$Travel.Status == "ARRIVAL"),]
-departures = immigration_df[which(immigration_df$Travel.Status == "DEPARTURE"),]
 
-inter_arrivals = gcIntermediate(cbind(arrivals$depart_lon, arrivals$depart_lat), cbind(arrivals$arrive_lon,arrivals$arrive_lat),
-               n=1000, 
-               addStartEnd=TRUE,
-               sp=TRUE)
-inter_departures = gcIntermediate(cbind(departures$depart_lon, departures$depart_lat), cbind(departures$arrive_lon,departures$arrive_lat),
-                                n=2, 
-                                addStartEnd=TRUE,
-                                sp=TRUE)
-inter_arrivals %>% leaflet() %>% addTiles() %>% setView(lng = arrive_lon, lat = arrive_lat, zoom =3) %>% 
-  addPolylines()
-lines(inter)                 
+
+customs_df$Date.Of.Report = as.Date(strptime(customs_df$Date.Of.Report, "%m/%d/%y"))
+# arrive_lat = quantile(unique(immigration_df$arrive_lat), na.rm=TRUE,0.75)[[1]]
+# arrive_lon = quantile(unique(immigration_df$arrive_lon), na.rm=TRUE,0.75)[[1]]
+# immigration_df_coords = data.frame(group = immigration_df$Travel.Status,
+#                                    lat = c(immigration_df$depart_lat, immigration_df$arrive_lat),
+#                                    long = c(immigration_df$depart_lon, immigration_df$arrive_lon))
+# arrivals = immigration_df[which(immigration_df$Travel.Status == "ARRIVAL"),]
+# departures = immigration_df[which(immigration_df$Travel.Status == "DEPARTURE"),]
+# 
+# inter_arrivals = gcIntermediate(cbind(arrivals$depart_lon, arrivals$depart_lat), cbind(arrivals$arrive_lon,arrivals$arrive_lat),
+#                n=1000,
+#                addStartEnd=TRUE,
+#                sp=TRUE)
+# inter_departures = gcIntermediate(cbind(departures$depart_lon, departures$depart_lat), cbind(departures$arrive_lon,departures$arrive_lat),
+#                                 n=2,
+#                                 addStartEnd=TRUE,
+#                                 sp=TRUE)
+
+# lines(inter)                 
 ctr_df$dateOfTransaction = as.Date(strptime(ctr_df$dateOfTransaction, "%m/%d/%Y %H:%M:%S"))
 ctr_df$cashAmount = as.numeric(gsub("[\\$,]", "", as.character(ctr_df$cashAmount)))
 ctr_df$fullNameOfFinancialInstitution = as.character(toupper(ctr_df$fullNameOfFinancialInstitution))
