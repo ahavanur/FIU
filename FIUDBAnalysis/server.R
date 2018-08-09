@@ -296,7 +296,7 @@ shinyServer(function(input, output) {
     immigration_df$Travel.Date <- as.Date(strptime(immigration_df$Travel.Date, "%m/%d/%y"))
     immigration_df$flight <- paste(immigration_df$Carrier, immigration_df$Voyage)
     immigration_df$fullflight <- paste(immigration_df$Carrier, immigration_df$Voyage, immigration_df$Travel.Status)
-    flights_df = read.csv(paste(path,"flights.csv",sep=''))
+    flights_df = read.csv(paste(path,"Flights.csv",sep=''))
     flights_df$Type = toupper(flights_df$Type)
     flights_df$fullflight = paste(flights_df$Flight, flights_df$Type)
     flightmatch_df = as.data.frame(1-stringdistmatrix(immigration_df$fullflight, flights_df$fullflight, method = "jw"))
