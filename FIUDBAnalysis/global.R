@@ -7,7 +7,7 @@ load_or_install<-function(package_names)
     {
       install.packages(package_name,repos="http://lib.stat.cmu.edu/R/CRAN")
     }
-    load_or_install(package_name,character.only=TRUE,quietly=TRUE,verbose=FALSE)
+    library(package_name,character.only=TRUE,quietly=TRUE,verbose=FALSE)
   }
 }
 
