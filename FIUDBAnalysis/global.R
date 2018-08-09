@@ -1,16 +1,12 @@
-is_installed <- function(mypkg) is.element(mypkg, installed.packages()[,1])
-load_or_install<-function(package_names)
-{
-  for(package_name in package_names)
-  {
-    if(!is_installed(package_name))
-    {
-      install.packages(package_name,repos="http://lib.stat.cmu.edu/R/CRAN")
-    }
-    library(package_name,character.only=TRUE,quietly=TRUE,verbose=FALSE)
+is_installed <- function(mypkg) {return(is.element(mypkg, installed.packages()[,1]))}
+load_or_install<-function(package_name){
+  if(!is_installed(package_name)) {
+    install.packages(package_name,repos="http://lib.stat.cmu.edu/R/CRAN")
   }
+  library(package_name,character.only = TRUE)
 }
-
+# source("https://bioconductor.org/biocLite.R")
+# biocLite("GOsummaries")
 load_or_install("dplyr")
 load_or_install("tidyr")
 load_or_install("ggplot2")

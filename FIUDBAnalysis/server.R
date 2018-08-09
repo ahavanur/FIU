@@ -7,11 +7,12 @@
 #    http://shiny.rstudio.com/
 #
 shinyServer(function(input, output) {
-  shinyDirChoose(input, 'folder_path', roots = c(home = "~"))
+  shinyDirChoose(input, 'folder_path',roots=c(home="C:/Users/user"))
   getDirectory <- reactive({
     input_path <- input$folder_path
     path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
-    path <- paste("~/",path,"/", collapse="",sep="")
+    path <- paste("C:/Users/user",path,"/", collapse="",sep="")
+    print(path)
     return(path)})
   #getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
   output$ctr_ui <- 
@@ -296,7 +297,7 @@ shinyServer(function(input, output) {
     immigration_df$Travel.Date <- as.Date(strptime(immigration_df$Travel.Date, "%m/%d/%y"))
     immigration_df$flight <- paste(immigration_df$Carrier, immigration_df$Voyage)
     immigration_df$fullflight <- paste(immigration_df$Carrier, immigration_df$Voyage, immigration_df$Travel.Status)
-    flights_df = read.csv(paste(path,"flights.csv",sep=''))
+    flights_df = read.csv(paste(path,"Flights.csv",sep=''))
     flights_df$Type = toupper(flights_df$Type)
     flights_df$fullflight = paste(flights_df$Flight, flights_df$Type)
     flightmatch_df = as.data.frame(1-stringdistmatrix(immigration_df$fullflight, flights_df$fullflight, method = "jw"))
