@@ -1,3 +1,4 @@
+is_installed <- function(mypkg) is.element(mypkg, installed.packages()[,1])
 load_or_install<-function(package_names)
 {
   for(package_name in package_names)
