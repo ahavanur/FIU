@@ -1,10 +1,9 @@
 library(markdown)
 
 navbarPage("Navigation",
-           tabPanel("Home", shinyDirButton("folder_path", "Chose directory", "Upload")),
+           tabPanel("Main Page", h1("Welcome to the FIU Raider"), h6("RAIDER (Report Analytics & Intelligence Data Examination in R) is a tool designed to help the FIU better understand the visualize intelligence reports and data collected from partner agencies. Each tab represents a different source of intelligence, and provides filtering and querying options, and employs a variety of visualization techniques"), h6("To begin, please click on the button below to choose a folder that contains the exported files of the FIU Database. Before you begin, select the export folder from the directory below."), shinyDirButton("folder_path", "Chose directory", "Upload")),
            tabPanel("CTR Summary", fluidPage(sidebarLayout(
                       sidebarPanel(
-                        directoryInput('folder_path', label = 'select a directory'),
                         checkboxGroupInput("ctr_banks", "Banks", choices = 
                                              list("Bank of Hawaii" = "BANK OF HAWAII",
                                                   "Bank of Guam" = "BANK OF GUAM",
@@ -81,5 +80,17 @@ navbarPage("Navigation",
                         width = 2
                       ),
                       mainPanel(uiOutput("str_ui"), width = 10)
-           )))
+           ))),
+           tabPanel("Individual Report", fluidPage(sidebarLayout(
+             sidebarPanel(
+               selectizeInput("indiv_name", "Name", NULL,  multiple=FALSE),
+               selectizeInput("indiv_assc", "Track Associates", NULL,  multiple=TRUE),
+               selectizeInput("indiv_accts", "Track Accounts", NULL,  multiple=TRUE),
+               width=2),
+             mainPanel(
+               uiOutput("indiv_plots"),
+               plotOutput("indiv_plot_ctr"),
+               plotOutput("indiv_plot_str"),
+               leafletOutput("indiv_imm_map"),width=10)
+             )))
            )

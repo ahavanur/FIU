@@ -72,3 +72,12 @@ create_ui_select_inputs = function(df, field){
   new_ui_list = tolower(names(sort(table(new_ui_list),decreasing=TRUE)))
   return(new_ui_list)
 }
+
+fuzzyNameMatchIdx = function(name_vec, name, threshold=0.75) {
+  return(which(1 - stringdist(trimws(name_vec),trimws(name), method="jw") >= threshold))
+}
+
+tags$style(type="text/css",
+           ".shiny-output-error { visibility: hidden; }",
+           ".shiny-output-error:before { visibility: hidden; }"
+)

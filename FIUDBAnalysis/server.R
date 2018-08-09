@@ -7,13 +7,13 @@
 #    http://shiny.rstudio.com/
 #
 shinyServer(function(input, output) {
-  shinyDirChoose(input, 'folder_path',roots = c(home = '~'))
+  shinyDirChoose(input, 'folder_path', roots = c(home = "~"))
   getDirectory <- reactive({
     input_path <- input$folder_path
     path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
     path <- paste("~/",path,"/", collapse="",sep="")
     return(path)})
-  
+  getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
   output$ctr_ui <- 
     renderUI({
     path <<- getDirectory()
@@ -129,7 +129,6 @@ shinyServer(function(input, output) {
   
   output$ctr_plot <- 
     renderPlot({
-        # print(paste(unlist(dir()$path), collapse = .Platform$file.sep))
         ctr_df <<- makeCTRdf()
         pit_df <<- makePITdf()
         pit_df_acct <- separate_rows(pit_df,accountNumbers,sep="/")
@@ -712,7 +711,7 @@ shinyServer(function(input, output) {
       subtitle_characterization = NULL
     }
     subtitlefull = paste(subtitle_count,subtitle_amount,subtitle_occupations, subtitle_narratives, subtitle_firstname, subtitle_lastname,subtitle_characterization, sep = "")
-    str_hist <- str_hist + ggtitle("STR Amounts By Month", subtitle = subtitlefull)
+    str_hist <- str_hist + ggtitle("STR Amounts By Month", subtitle = format(subtitlefull,trim=TRUE, big.mark=","))
     str_hist
   })
   
@@ -756,7 +755,166 @@ shinyServer(function(input, output) {
       a = list(plot_str_hist(), plot_str_cloud())
       grid.arrange(grobs=a, heights=c(600,500))
       })
+  
+  output$indiv_plot_ctr <- renderPlot({
+    path <<- getDirectory()
+    ctr_df <<- makeCTRdf()
+    pit_df <<- makePITdf()
+    pit_df$fullname = toupper(trimws(paste(pit_df$firstName, pit_df$lastNameOrNameOfEntity)))
+    pit_df$original_index = seq(1,nrow(pit_df))
+    pit_df_acct <- separate_rows(pit_df,accountNumbers,sep="/")
+    pit_df_acct <- separate_rows(pit_df_acct,accountNumbers,sep=",")
     
+    ctr_names = c(input$indiv_name, input$indiv_assc)
+    range_names_ctrs = restrict_terms(pit_df_acct,"fullname", ctr_names,0.75)
+    ctr_name_idx = which(ctr_df$CTRID %in% unique(pit_df_acct$CTRID[range_names_ctrs]))
+    if (length(input$indiv_accts) != 0) {
+      ctr_acct_idx = which(ctr_df$CTRID %in% unique(pit_df_acct$accountNumbers %in% input$indiv_accts)) 
+    }
+    else {
+      ctr_acct_idx = seq(1,nrow(ctr_df))
+    }
+    ctr_display_indiv <- ctr_df[Reduce(intersect,list(ctr_name_idx,ctr_acct_idx)),] %>% mutate(month = format(dateOfTransaction, "%m"), year = format(dateOfTransaction, "%Y"))
+    ctr_display_indiv$date = as.Date(paste(ctr_display_indiv$year, ctr_display_indiv$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
+    ctr_by_month = ctr_display_indiv %>%
+      group_by(date, fullNameOfFinancialInstitution, cashDirection) %>%
+      summarise(total = sum(cashAmount), count = n())
+    #seperating deposits for withdrawals
+    deposits = ctr_by_month[which(toupper(ctr_by_month$cashDirection) == 'DEPOSIT'),]
+    withdrawals = ctr_by_month[which(toupper(ctr_by_month$cashDirection) == 'WITHDRAWAL'),]
+    
+    withdrawals$total = -1 * withdrawals$total 
+    withdrawals$count = -1 * withdrawals$count
+    
+    agg_deposits = deposits %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
+    agg_withdrawals = withdrawals %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
+    rnge_df = agg_deposits
+    rnge = seq(-1.5*round(max(rnge_df$total, na.rm = TRUE)), max(rnge_df$total)*1.1, 1)
+    max_rnge = max(rnge) - floor(max(rnge)%%(10^floor(log10(max(rnge)))))
+    min_rnge = -1*(abs(min(rnge)) - floor(abs(min(rnge))%%(10^floor(log10(abs(min(rnge)))))))
+    rnge = round(rnge[(round(rnge%%10^(floor(log10(max(rnge)))))%%(10^(floor(log10(max(rnge))))))==0])
+    rnge = c(min_rnge, rnge, max_rnge)
+    
+    w_d_total <- ggplot(NULL, aes(date, total)) + 
+      geom_bar(stat = "identity", aes(fill = fullNameOfFinancialInstitution), data = deposits, fill = "forest green") +
+      theme(text = element_text(size=15), axis.text.x = element_text(angle = 90, hjust = 1), axis.text.y = (element_text(size=15)))+ scale_y_continuous(breaks=rnge, label=comma) +
+      scale_x_date(breaks = date_breaks("months"), labels = date_format("%b-%Y")) + ylab("Total Amount ($)") + xlab("Date")
+    #add withdrawals
+    if (nrow(withdrawals) != 0) {
+      w_d_total <- w_d_total + geom_bar(stat = "identity", aes(fill = fullNameOfFinancialInstitution), data = withdrawals, fill = "red")
+    } 
+    w_d_total <- w_d_total + ggtitle("CTR Cash Flow Per Bank", subtitle = "Deposits in Green, Withdrawals in Red")
+    #showing all banks seperately
+    deposits_iso_use = agg_deposits
+    withdrawals_iso_use = agg_withdrawals
+    #adding labels to each bar 
+    w_d_total = w_d_total + geom_text(aes(label = paste("$",as.character(total), sep="")), data = deposits_iso_use, stat = 'identity', angle = 90, position = position_stack(vjust = .5)) +
+      geom_text(aes(label = count), data = deposits_iso_use, stat = 'identity', vjust = -1)
+    w_d_total = w_d_total + geom_text(aes(label = paste("$",as.character(-1*total), sep="")), data = withdrawals_iso_use, stat = 'identity', angle = 90, position = position_stack(vjust = .5))+
+      geom_text(aes(label = -1*count), data = withdrawals_iso_use, stat = 'identity', vjust=1.5)
+    if (!is.null(input$indiv_name)) { 
+      w_d_total
+    }
+    
+  })
   
+  output$indiv_plot_str <- renderPlot({
+    path <<- getDirectory()
+    str_df <<- makeSTRdf()
+    str_df$fullname = toupper(trimws(paste(str_df$firstName, str_df$lastNameOrNameOfEntity)))
+    stracct_df = separate_rows(str_df,accountNumbers,sep="/")
+    stracct_df = separate_rows(stracct_df,accountNumbers,sep=",")
+    stracct_agg <<- stracct_df %>% group_by(STRID) %>% summarise(count = n()) 
+    str_stringed <<- makeSTRstringeddf()
+    
+    str_names = c(input$indiv_name, input$indiv_assc)
+    str_df$original_index = seq(1,nrow(str_df))
+    range_names_strs = restrict_terms(str_df,"fullname", str_names,0.75)
+    if (length(input$indiv_accts) != 0) {
+      str_acct_idx = which(str_df$STRID %in% input$indiv_accts) 
+    }
+    else {
+      str_acct_idx = seq(1,nrow(str_df))
+    }
+    str_display_indiv <- str_df[Reduce(intersect,list(range_names_strs,str_acct_idx)),] %>% mutate(month = format(strDateGenerate, "%m"), year = format(strDateGenerate, "%Y"))
+    str_display_indiv$date = as.Date(paste(str_display_indiv$year, str_display_indiv$month, "01", sep="-"), "%Y-%m-%d", origin = "1960-10-01")
+    
+    str_by_month = str_display_indiv %>% group_by(date, fullNameOfFinancialInstitution) %>% summarise(total = sum(amountOfCash), count = n())
+    
+    agg_str = str_by_month %>% group_by(date) %>% summarise(total = sum(total), count = sum(count))
+    
+    str_hist <- ggplot(str_by_month, aes(date, total)) + 
+      geom_bar(stat='identity', aes(fill = fullNameOfFinancialInstitution), fill = "forest green") + 
+      theme(text = element_text(size=15), axis.text.x = element_text(angle = 90, hjust = 1), axis.text.y = (element_text(size=15)))  +
+      scale_y_continuous(label=comma) + scale_x_date(breaks = date_breaks("months"), labels = date_format("%b-%Y")) + 
+      ylab("Total Amount ($)") + xlab("STR Generation Date")
+    
+    agg_str_iso = agg_str
+    
+    str_hist <- str_hist + 
+      geom_text(aes(label = paste("$",as.character(total), sep="")), data = agg_str_iso, stat = 'identity', angle = 90, position = position_stack(vjust = .5)) +
+      geom_text(aes(label = count), data = agg_str_iso, stat = 'identity', vjust = -1)
+    subtitle_count = paste("Total STRs Shown:",format(nrow(str_display_indiv),trim=TRUE,big.mark=","),"\n")
+    subtitle_amount = paste("Total STR Amounts Shown:", format(sum(str_by_month$total),trim=TRUE,big.mark=","))
+    subtitlefull = paste(subtitle_count,subtitle_amount, sep = "")
+    str_hist <- str_hist + ggtitle("STR Amounts By Month", subtitle = format(subtitlefull,trim=TRUE, big.mark=","))
+    str_hist
+    
+  })
   
+  output$indiv_imm_map <- renderLeaflet({
+    path <<- getDirectory()
+    immigration_df <<- makeImmigrationdf()
+    immigration_df$fullname =  toupper(trimws(paste(immigration_df$First.and.Middle.Name, immigration_df$Last.Name)))
+    immigration_df$original_index = seq(1,nrow(immigration_df))
+    immigration_display = immigration_df[restrict_terms(immigration_df, "fullname", c(input$indiv_name, input$indiv_assc),0.75),]
+    if (nrow(immigration_display)!= 0) {
+      arrive_lon = mean(unique(immigration_display$arrive_lon))
+      arrive_lat = mean(unique(immigration_display$arrive_lat))
+      leaflet() %>% addTiles() %>% setView(lng = arrive_lon, lat = arrive_lat, zoom =4) %>% 
+        addCircleMarkers(data = immigration_display, lng = ~depart_lon, lat = ~depart_lat, clusterOptions = markerClusterOptions(spiderfyOnMaxZoom = FALSE, zoomToBoundsOnClick = FALSE))
+    }
+  })
+  
+  output$indiv_plots <- renderUI({
+    path <<- getDirectory()
+    str_df <<- makeSTRdf()
+    ctr_df <<- makeCTRdf()
+    pit_df <<- makePITdf()
+    customs_df <<- makeCustomsdf()
+    immigration_df <<- makeImmigrationdf()
+    immigration_df$fullname =  toupper(trimws(paste(immigration_df$First.and.Middle.Name, immigration_df$Last.Name)))
+    str_df$fullname = toupper(trimws(paste(str_df$firstName, str_df$lastNameOrNameOfEntity)))
+    pit_df$fullname = toupper(trimws(paste(pit_df$firstName, pit_df$lastNameOrNameOfEntity)))
+    customs_df$fullname = toupper(trimws(paste(customs_df$First.Name, customs_df$Last.Name)))
+    customs_df$beneficiaryfullname = toupper(trimws(paste(customs_df$Beneficiary.First.And.Middle.Name, customs_df$Last.Name)))
+    
+    indiv_fullname_ui_choices = unique(Reduce(union,list(str_df$fullname,pit_df$fullname, customs_df$fullname,customs_df$beneficiaryfullname)))
+    updateSelectizeInput(getDefaultReactiveDomain(), "indiv_name", choices = indiv_fullname_ui_choices, selected = input$indiv_name)
+    name_strs = str_df$STRID[fuzzyNameMatchIdx(str_df$fullname,input$indiv_name)]
+    name_ctrs = pit_df$CTRID[fuzzyNameMatchIdx(pit_df$fullname,input$indiv_name)]
+    
+    str_df_acct <- separate_rows(str_df,accountNumbers,sep="/")
+    str_df_acct <- separate_rows(str_df_acct,accountNumbers,sep=",")
+    accounts_str = trimws(str_df_acct$accountNumbers[which(str_df$STRID %in% name_strs)])
+    pit_df$original_index = seq(1,nrow(pit_df))
+    pit_df_acct <- separate_rows(pit_df,accountNumbers,sep="/")
+    pit_df_acct <- separate_rows(pit_df_acct,accountNumbers,sep=",")
+    accounts_ctr = trimws(pit_df_acct$accountNumbers[which(pit_df_acct$CTRID %in% name_ctrs)])
+    
+    assc_accounts = union(accounts_str,accounts_ctr)
+    assc_accounts = assc_accounts[assc_accounts != ""]
+    updateSelectizeInput(getDefaultReactiveDomain(), "indiv_accts",choices = assc_accounts)
+    associates_str = unique(str_df$fullname[which(str_df$accountNumbers %in% assc_accounts)])
+    associates_ctr = unique(pit_df$fullname[which(pit_df$accountNumbers %in% assc_accounts)])
+    associates_customs = customs_df$fullname[fuzzyNameMatchIdx(customs_df$benbeneficiaryfullname,input$indiv_name)]
+    associates_customs_traveller = customs_df$beneficiaryfullname[fuzzyNameMatchIdx(customs_df$fullname,input$indiv_name)]
+    associates_vals = list(associates_str,associates_ctr,associates_customs,associates_customs_traveller)
+    associates = unlist(Reduce(union, associates_vals))
+    updateSelectInput(getDefaultReactiveDomain(), "indiv_assc",choices = associates)
+    tags$style(type="text/css",
+               ".shiny-output-error { visibility: hidden; }",
+               ".shiny-output-error:before { visibility: hidden; }"
+    )
+  })
 })
