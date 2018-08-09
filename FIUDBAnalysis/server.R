@@ -13,7 +13,7 @@ shinyServer(function(input, output) {
     path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
     path <- paste("~/",path,"/", collapse="",sep="")
     return(path)})
-  getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
+  #getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
   output$ctr_ui <- 
     renderUI({
     path <<- getDirectory()
