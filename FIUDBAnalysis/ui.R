@@ -105,7 +105,7 @@ navbarPage("Navigation",
                selectizeInput("indiv_accts", "Track Accounts", NULL,  multiple=TRUE),
                width=2),
              mainPanel(
-               h2("Quick Overall Summary of Individual(s)"),
+               h2("Overall Summary of Individual(s)"),
                h5("This page allows you to get a brief snapshot of an individual and their known associates and buisness dealings. Start by selecting a Name, and the plots will then be produced. You can then select accounts associated with that person (drawn from STR and CTR filings), and potential known assocaites (other names linked to those accounts) and see a comprehensive picture involving all parts involved."),
                uiOutput("indiv_plots"),
                plotOutput("indiv_plot_ctr"),
