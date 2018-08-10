@@ -7,14 +7,14 @@
 #    http://shiny.rstudio.com/
 #
 shinyServer(function(input, output) {
-  shinyDirChoose(input, 'folder_path',roots=c(home="C:/Users/user"))
-  getDirectory <- reactive({
-    input_path <- input$folder_path
-    path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
-    path <- paste("C:/Users/user",path,"/", collapse="",sep="")
-    print(path)
-    return(path)})
-  #getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
+  # shinyDirChoose(input, 'folder_path',roots=c(home="C:/Users/user"))
+  # getDirectory <- reactive({
+  #   input_path <- input$folder_path
+  #   path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
+  #   path <- paste("C:/Users/user",path,"/", collapse="",sep="")
+  #   print(path)
+  #   return(path)})
+  getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
   output$ctr_ui <- 
     renderUI({
     path <<- getDirectory()
@@ -198,10 +198,10 @@ shinyServer(function(input, output) {
           if (input$ctr_net) {
             w_d_total <- w_d_total + 
               stat_summary(data = net, fun.y = sum, geom = 'line', color = "dark blue", size = 2) +
-              ggtitle("CTR Cash Flow Per Bank", subtitle = "Deposits in Green, Withdrawals in Red, Net in Blue")
+              ggtitle("CTR Cash Flow", subtitle = "Deposits in Green, Withdrawals in Red, Net in Blue")
             }
           else {
-            w_d_total <- w_d_total + ggtitle("CTR Cash Flow Per Bank", subtitle = "Deposits in Green, Withdrawals in Red")
+            w_d_total <- w_d_total + ggtitle("CTR Cash Flow", subtitle = "Deposits in Green, Withdrawals in Red")
           }
           #showing all banks seperately
           if (input$ctr_bank_iso) {
@@ -813,7 +813,7 @@ shinyServer(function(input, output) {
       geom_text(aes(label = count), data = deposits_iso_use, stat = 'identity', vjust = -1)
     w_d_total = w_d_total + geom_text(aes(label = paste("$",as.character(-1*total), sep="")), data = withdrawals_iso_use, stat = 'identity', angle = 90, position = position_stack(vjust = .5))+
       geom_text(aes(label = -1*count), data = withdrawals_iso_use, stat = 'identity', vjust=1.5)
-    if (!is.null(input$indiv_name)) { 
+    if (input$indiv_name != "") { 
       w_d_total
     }
     
