@@ -13,7 +13,7 @@ shinyServer(function(input, output) {
     path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
     path <- paste("~/",path,"/", collapse="",sep="")
     return(path)})
-  #getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
+  # getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
   output$ctr_ui <- 
     renderUI({
     path <<- getDirectory()
@@ -65,17 +65,17 @@ shinyServer(function(input, output) {
   
   restrictCTRoccupations <- reactive({    
     range_occupation_ctrs = restrict_terms(pit_stringed,"occupationOrTypeOfBusiness", input$ctr_occupation,0.75)
-    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID[range_occupation_ctrs])))
+    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID)[range_occupation_ctrs]))
   })
   
   restrictCTRlastnames <- reactive({
     range_lastname_ctrs = restrict_terms(pit_stringed,"lastNameOrNameOfEntity", input$ctr_lastname,0.75)
-    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID[range_lastname_ctrs])))
+    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID)[range_lastname_ctrs]))
   })
   
   restrictCTRfirstnames <- reactive({
     range_firstname_ctrs = restrict_terms(pit_stringed,"firstName", input$ctr_firstname,0.75)
-    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID[range_firstname_ctrs])))
+    return(which(ctr_df$CTRID %in% unique(pit_stringed$CTRID)[range_firstname_ctrs]))
   })
 
   makeCTRdf <- reactive ({
@@ -296,7 +296,7 @@ shinyServer(function(input, output) {
     immigration_df$Travel.Date <- as.Date(strptime(immigration_df$Travel.Date, "%m/%d/%y"))
     immigration_df$flight <- paste(immigration_df$Carrier, immigration_df$Voyage)
     immigration_df$fullflight <- paste(immigration_df$Carrier, immigration_df$Voyage, immigration_df$Travel.Status)
-    flights_df = read.csv(paste(path,"flights.csv",sep=''))
+    flights_df = read.csv(paste(path,"Flights.csv",sep=''))
     flights_df$Type = toupper(flights_df$Type)
     flights_df$fullflight = paste(flights_df$Flight, flights_df$Type)
     flightmatch_df = as.data.frame(1-stringdistmatrix(immigration_df$fullflight, flights_df$fullflight, method = "jw"))
