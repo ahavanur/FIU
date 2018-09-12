@@ -2,7 +2,6 @@ import csv
 from collections import defaultdict
 import os 
 import sys #dealing with multiple versions of Python and some minor differences between them
-import zipfile 
 if sys.version_info[0] < 3:
 	from Tkinter import *
 	import tkFileDialog
@@ -29,7 +28,7 @@ def clean(path, outpath = None):
 	data['accountNumbers'] = list(map(lambda x: " " if x == '' else " / ".join(str(x).split(",")), data['accountNumbers']))
 	data['CTRID'] = list(map(lambda x: '"' + str(x) + "0"*(9-len(str(x))) + '"', data['CTRID']))
 	data['lastNameOrNameOfEntity'] = list(map(lambda x : 'GIBBONS' if x.strip().upper() == 'GIBSONS' else x.strip().upper(), data['lastNameOrNameOfEntity']))
-	for i in xrange(len(data['lastNameOrNameOfEntity'])):
+	for i in range(len(data['lastNameOrNameOfEntity'])):
 		if data['lastNameOrNameOfEntity'][i].upper() == "WHIPPS":
 			if data['firstName'][i].upper() == "SURANGEL":
 				if data['dateOfBirth'][i] == '2/21/1939':
@@ -40,10 +39,11 @@ def clean(path, outpath = None):
 			data['firstName'][i] = names[0].upper()
 	data['contactPhoneNumber'] = list(map((lambda x: str(x).strip()), data['contactPhoneNumber']))
 	data['contactPhoneNumber'] = list(map(lambda x: "" if len(str(x)) == 0 else ('"' + str(x)[:3] + "-" + str(x)[3:6] + "-" + str(x)[6:] + '"') if len(str(x)) == 10 else ('"' + "680-" + str(x)[:3] + "-" + str(x)[3:6] + '"' if len(str(x)) == 7 else '"' + str(x) + '"'), data['contactPhoneNumber']))
+	data['cashAmount'] = list(map(lambda x: str(x.replace(",","")), data['cashAmount']))
+	data['cashAmount'] = list(map(lambda x: str(x.replace("$","")), data['cashAmount']))
 	authority_map = dict()
 	authority_map['PW'] = 'Palau'
 	authority_map['HI'] = 'Hawaii'
-	authority_map['MP'] = 'Saipan'
 	authority_map['DE'] = 'Delaware'
 	authority_map['GU'] = 'Guam'
 	data['idIssuingAuthority'] = list(map(lambda x: "" if len(str(x).strip()) == 0 else (str(x).strip().upper() if str(x).strip().upper() not in authority_map else authority_map[str(x).strip().upper()]), data['idIssuingAuthority']))
@@ -71,19 +71,7 @@ def run():
 		zippath = tkFileDialog.askopenfile() #open up the file system and get the name
 	else:
 		zippath = filedialog.askopenfile()
-	if os.path.splitext(zippath.name)[1] == '.zip':
-		zipf = zipfile.ZipFile(zippath)
-		zipf.extractall(os.path.splitext(zippath.name)[0])
-		folder = os.path.splitext(zippath.name)[0]+"/"
-		for file in os.listdir(folder):
-			if not file.startswith("UPDATED"):
-				path = folder + "/" + file
-				try:
-					clean(path)
-				except:
-					continue
-	else:
-		clean(zippath.name)
+	clean(zippath.name)
 
 run()
 

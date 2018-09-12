@@ -1,7 +1,16 @@
 library(markdown)
 
 navbarPage("Navigation",
-           tabPanel("Main Page", h1("Welcome to the FIU Raider"), h6("RAIDER (Report Analytics & Intelligence Data Examination in R) is a tool designed to help the FIU better understand the visualize intelligence reports and data collected from partner agencies. Each tab represents a different source of intelligence, and provides filtering and querying options, and employs a variety of visualization techniques"), h6("To begin, please click on the button below to choose a folder that contains the exported files of the FIU Database. Before you begin, select the export folder from the directory below."), shinyDirButton("folder_path", "Chose directory", "Upload")),
+           tabPanel("Main Page", h1("Welcome to the FIU Raider"), 
+                    h2("About this tool"),
+                    h5("RAIDER (Report Analytics & Intelligence Data Examination in R) is a tool designed to help the FIU better understand the visualize intelligence reports and data collected from partner agencies."),
+                    h2("Tabs Explanation"),
+                    h5("Each tab represents a different source of intelligence, and provides filtering and querying options, and employs a variety of visualization techniques"),
+                    h2("Getting Started"),
+                    h5("To begin, please click on the button below to choose a folder that contains the exported files of the FIU Database. Before you begin, select the export folder from the directory below."), 
+                    shinyDirButton("folder_path", "Chose folder", "Import FIU Export Files"),
+                    h6("FIU RAIDER was developed by Apoorva Havanur (https://github.com/ahavanur/FIU) during the summer of 2018 while working as a consultant for the Palau FIU. Contact yhavanur@gmail.com for questions or concerns.")
+                    ),
            tabPanel("CTR Summary", fluidPage(sidebarLayout(
                       sidebarPanel(
                         checkboxGroupInput("ctr_banks", "Banks", choices = 
@@ -32,6 +41,8 @@ navbarPage("Navigation",
                         selectizeInput("ctr_occupation", "Occupation", NULL,  multiple=TRUE), 
                         width = 2),
                       mainPanel(
+                        h2("Summarizing CTR History Over Time"),
+                        h5("The plot below displays CTRs for each month over time. Use the buttons on the side to filter for specific individuals, dates, banks, etc. If an error message appears, it means that the filters you've selected have resulted in no matching CTRs. Remove the filters and try again."),
                         uiOutput("ctr_ui"),width = 10
                       )))),
            tabPanel("Immigration & Customs Summary", fluidPage(sidebarLayout(
@@ -49,7 +60,10 @@ navbarPage("Navigation",
                         numericInput("imm_max_cash", 
                                      "Max. Cash Amount", 
                                      value = NULL),width=2),
-                      mainPanel(leafletOutput("imm_map"),uiOutput("imm_plot_ui"), width = 10)))),
+                      mainPanel(
+                        h2("International and Currency Movement"),
+                        h5("The map below shows the movement patterns identified in the immigration and customs data collected, while the graph below shows the flow of currency (calculated in USD) in and out of Palau. Since immigration and customs are the newest data available in the FIUDB, these graphs may not appear due to lack of data"),
+                        leafletOutput("imm_map"),uiOutput("imm_plot_ui"), width = 10)))),
            tabPanel("STR Summary", fluidPage(sidebarLayout(
                       sidebarPanel(
                         checkboxGroupInput("str_banks", "Banks", choices = 
@@ -79,7 +93,10 @@ navbarPage("Navigation",
                         selectizeInput("str_narrative", "Narrative Terms",NULL, multiple=TRUE),
                         width = 2
                       ),
-                      mainPanel(uiOutput("str_ui"), width = 10)
+                      mainPanel(
+                        h2("Summarizing STR History Over Time"),
+                        h5("The plot below displays STRs for each month over time. Use the buttons on the side to filter for specific individuals, dates, banks, etc. The word cloud below identifies keywords in the narratives of the displayed STRs. If an error message appears, it means that the filters you've selected have resulted in no matching STRs. Remove the filters and try again."),
+                        uiOutput("str_ui"), width = 10)
            ))),
            tabPanel("Individual Report", fluidPage(sidebarLayout(
              sidebarPanel(
@@ -88,6 +105,8 @@ navbarPage("Navigation",
                selectizeInput("indiv_accts", "Track Accounts", NULL,  multiple=TRUE),
                width=2),
              mainPanel(
+               h2("Overall Summary of Individual(s)"),
+               h5("This page allows you to get a brief snapshot of an individual and their known associates and buisness dealings. Start by selecting a Name, and the plots will then be produced. You can then select accounts associated with that person (drawn from STR and CTR filings), and potential known assocaites (other names linked to those accounts) and see a comprehensive picture involving all parts involved."),
                uiOutput("indiv_plots"),
                plotOutput("indiv_plot_ctr"),
                plotOutput("indiv_plot_str"),

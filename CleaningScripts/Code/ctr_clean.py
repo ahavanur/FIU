@@ -21,6 +21,8 @@ def clean(path, outpath = None):
 	                                 # based on column name k
 	headers = ["CTRID","dateOfTransaction","cashDirection","cashAmount","typeOfFinancialInstitution","fullNameOfFinancialInstitution","nameOfBranchOfficeAgency"]
 	data["CTRID"] = list(map(lambda x: '"' + x + '"', data["CTRID"]))
+	data['cashAmount'] = list(map(lambda x: str(x.replace(",","")), data['cashAmount']))
+	data['cashAmount'] = list(map(lambda x: str(x.replace("$","")), data['cashAmount']))
 	data["fullNameOfFinancialInstitution"] = list(map(lambda x: '"' + x + '"', data["fullNameOfFinancialInstitution"]))
 	dirs = path.split("/")
 	name = dirs[-1]
