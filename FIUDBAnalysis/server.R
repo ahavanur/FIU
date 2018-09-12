@@ -7,13 +7,13 @@
 #    http://shiny.rstudio.com/
 #
 shinyServer(function(input, output) {
-  shinyDirChoose(input, 'folder_path',roots=c(home="C:/Users/user"))
-  getDirectory <- reactive({
-    input_path <- input$folder_path
-    path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
-    path <- paste("C:/Users/user",path,"/", collapse="",sep="")
-    return(path)})
-  # getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
+  # shinyDirChoose(input, 'folder_path',roots=c(home="C:/Users/user"))
+  # getDirectory <- reactive({
+  #   input_path <- input$folder_path
+  #   path <- paste(unlist(input_path$path), collapse = .Platform$file.sep)
+  #   path <- paste("C:/Users/user",path,"/", collapse="",sep="")
+  #   return(path)})
+  getDirectory <- reactive({return("/Users/apoorvahavanur/Documents/School/2017-2018/Other/TCinGC/fiu/FIUExport/")})
   output$ctr_ui <- 
     renderUI({
     path <<- getDirectory()
